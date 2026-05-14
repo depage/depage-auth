@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file    User.php
  *
@@ -20,7 +21,7 @@ class User extends \Depage\Entity\PdoEntity
     /**
      * @brief fields
      **/
-    static protected $fields = array(
+    protected static $fields = [
         "type" => __CLASS__,
         "id" => null,
         "name" => "",
@@ -37,12 +38,12 @@ class User extends \Depage\Entity\PdoEntity
         "confirmId" => null,
         "resetPasswordId" => null,
         "loginTimeout" => 0,
-    );
+    ];
 
     /**
      * @brief primary
      **/
-    static protected $primary = array("id");
+    protected static $primary = ["id"];
 
     /**
      * @brief pdo object for database access
@@ -52,7 +53,7 @@ class User extends \Depage\Entity\PdoEntity
     /**
      * @brief useragent
      **/
-     protected $useragent = "";
+    protected $useragent = "";
 
     /**
      * @brief string sid of user when load from loadActive()
@@ -70,7 +71,8 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      void
      */
-    public function __construct(\Depage\Db\Pdo $pdo) {
+    public function __construct(\Depage\Db\Pdo $pdo)
+    {
         parent::__construct($pdo);
 
         $this->pdo = $pdo;
@@ -91,7 +93,8 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      User
      */
-    static public function loadByUsername($pdo, $username) {
+    public static function loadByUsername($pdo, $username)
+    {
         $user = current(self::loadBy($pdo, [
             'name' => $username,
         ]));
@@ -114,7 +117,8 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      User
      */
-    static public function loadByEmail($pdo, $email) {
+    public static function loadByEmail($pdo, $email)
+    {
         $user = current(self::loadBy($pdo, [
             'email' => $email,
         ]));
@@ -137,7 +141,8 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      auth_user
      */
-    static public function loadBySid($pdo, $sid) {
+    public static function loadBySid($pdo, $sid)
+    {
         $user = current(self::loadBy($pdo, [
             'sid' => $sid,
         ]));
@@ -156,7 +161,8 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      auth_user
      */
-    static public function loadById($pdo, $id) {
+    public static function loadById($pdo, $id)
+    {
         $user = current(self::loadBy($pdo, [
             'id' => $id,
         ]));
@@ -179,7 +185,8 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      auth_user
      */
-    static public function loadByConfirmId($pdo, $confirmId) {
+    public static function loadByConfirmId($pdo, $confirmId)
+    {
         $user = current(self::loadBy($pdo, [
             'confirmId' => $confirmId,
         ]));
@@ -198,7 +205,8 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      auth_user
      */
-    static public function loadByResetPasswordId($pdo, $resetPasswordId) {
+    public static function loadByResetPasswordId($pdo, $resetPasswordId)
+    {
         $user = current(self::loadBy($pdo, [
             'resetPasswordId' => $resetPasswordId,
         ]));
@@ -217,17 +225,18 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      User
      */
-    static public function loadByFuzzyName($pdo, $query) {
+    public static function loadByFuzzyName($pdo, $query)
+    {
         $users = self::loadBy($pdo, [
             'fuzzyName' => $query,
         ], [
-            "user.sortname"
+            "user.sortname",
         ]);
 
         // if search is only one term -> sort by word beginnings of query
         if (strpos($query, " ") === false) {
             $q = " " . $query;
-            uasort($users, function($a, $b) use ($q) {
+            uasort($users, function ($a, $b) use ($q) {
                 $nA = " " . str_replace(["-", "_"], " ", $a->name . " " . $a->fullname);
                 $nB = " " . str_replace(["-", "_"], " ", $b->name . " " . $b->fullname);
 
@@ -236,7 +245,7 @@ class User extends \Depage\Entity\PdoEntity
 
                 if (!$foundInA && $foundInB) {
                     return 1;
-                } else if ($foundInA && !$foundInB) {
+                } elseif ($foundInA && !$foundInB) {
                     return -1;
                 }
 
@@ -258,11 +267,12 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      auth_user
      */
-    static public function loadActive($pdo) {
+    public static function loadActive($pdo)
+    {
         $users = self::loadBy($pdo, [
             'active' => true,
         ], [
-            "user.sortname"
+            "user.sortname",
         ]);
 
         return $users;
@@ -279,9 +289,10 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      auth_user
      */
-    static public function loadAll($pdo) {
+    public static function loadAll($pdo)
+    {
         $users = self::loadBy($pdo, [], [
-            "user.sortname"
+            "user.sortname",
         ]);
 
         return $users;
@@ -293,9 +304,10 @@ class User extends \Depage\Entity\PdoEntity
      * @brief loadBy
      *
      * @param mixed $param
-     * @return void
+     *
+     * @return array
      **/
-    static public function loadBy($pdo, Array $search, Array $order = [])
+    public static function loadBy(\Depage\Db\Pdo $pdo, array $search, array $order = []): array
     {
         $users = [];
         $fields = "user." . implode(", user.", self::getFields());
@@ -376,7 +388,7 @@ class User extends \Depage\Entity\PdoEntity
         }
         if (isset($search['type'])) {
             $where[] = self::sqlConditionFor('user.type', $search['type'], $params);
-        } else if (get_called_class() != self::class) {
+        } elseif (get_called_class() != self::class) {
             // automatically filter by user type of called class
             $where[] = self::sqlConditionFor('user.type', get_called_class(), $params);
         }
@@ -394,8 +406,8 @@ class User extends \Depage\Entity\PdoEntity
         }
         $join = implode(" ", $join);
 
-        $sql =
-            "SELECT $fields
+        $sql
+            = "SELECT $fields
             FROM
                 {$pdo->prefix}_auth_user AS user
                 $join
@@ -436,7 +448,7 @@ class User extends \Depage\Entity\PdoEntity
      * @param mixed
      * @return void
      **/
-    public function jsonSerialize():mixed
+    public function jsonSerialize(): mixed
     {
         return [
             'id' => $this->data['id'],
@@ -473,10 +485,7 @@ class User extends \Depage\Entity\PdoEntity
      * @param mixed $value
      * @return void
      **/
-    protected function setSortname($value)
-    {
-
-    }
+    protected function setSortname($value) {}
     // }}}
     // {{{ setPassword()
     /**
@@ -568,7 +577,8 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      auth_user
      */
-    public function save() {
+    public function save()
+    {
         $fields = [];
         $params = [];
         $primary = self::$primary[0];
@@ -624,7 +634,8 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return      auth_user
      */
-    public function getUseragent() {
+    public function getUseragent()
+    {
         $parser = \UAParser\Parser::create();
         $result = $parser->parse($this->useragent);
 
@@ -644,8 +655,7 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return void
      */
-    public function onLogout($sid) {
-    }
+    public function onLogout($sid) {}
     // }}}
     // {{{ onLogin
     /**
@@ -659,8 +669,7 @@ class User extends \Depage\Entity\PdoEntity
      *
      * @return void
      */
-    public function onLogin($sid) {
-    }
+    public function onLogin($sid) {}
     // }}}
     // {{{ onLoad()
     /**
