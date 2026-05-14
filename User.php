@@ -448,7 +448,7 @@ class User extends \Depage\Entity\PdoEntity
      * @param mixed
      * @return void
      **/
-    public function jsonSerialize(): mixed
+    public function jsonSerialize(): array
     {
         return [
             'id' => $this->data['id'],
@@ -670,18 +670,6 @@ class User extends \Depage\Entity\PdoEntity
      * @return void
      */
     public function onLogin($sid) {}
-    // }}}
-    // {{{ onLoad()
-    /**
-     * @brief onLoad
-     *
-     * @param mixed
-     * @return void
-     **/
-    protected function onLoad()
-    {
-        // can be overridden by child class
-    }
     // }}}
 }
 
