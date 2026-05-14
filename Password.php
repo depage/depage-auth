@@ -11,10 +11,6 @@ class Password
 
     public function __construct($realm, $digestCompat = false)
     {
-        if (!function_exists("password_hash")) {
-            require_once(__DIR__ . "/Compat/password.php");
-        }
-
         $this->realm = $realm;
         $this->digestCompat = $digestCompat;
     }
