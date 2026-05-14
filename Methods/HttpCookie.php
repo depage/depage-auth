@@ -38,11 +38,15 @@ class HttpCookie extends Auth
     /**
      * @brief set cookie only through secure connection
      **/
-    public $cookieSecure = false;
+    public $cookieSecure = true;
     /**
      * @brief set http-only cookie -> no javascript access
      **/
     public $cookieHttponly = true;
+
+    public $cookieSameSite = 'None';
+
+    public $includeSubdomains = false;
     // }}}
 
     /* {{{ constructor */
@@ -53,18 +57,24 @@ class HttpCookie extends Auth
         $url = parse_url($domain);
         $this->cookiePath = !empty($url['path']) ? $url['path'] : '';
         $this->cookieName = \Depage\Auth\Auth::getSessionName($this->realm, $this->domain);
+        $this->cookieDomain = $url['host'];
 
         if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != "off") {
             $this->cookieSecure = true;
+        } elseif (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? "") == "https") {
+            $this->cookieSecure = true;
+        } else {
+            $this->cookieSecure = false;
         }
+        session_set_cookie_params([
+            'lifetime' => $this->sessionLifetime,
+            'path' => $this->cookiePath,
+            'domain' => "." . $this->cookieDomain,
+            'secure' => $this->cookieSecure,
+            'httponly' => $this->cookieHttponly,
+            'samesite' => $this->cookieSameSite,
+        ]);
         session_name($this->cookieName);
-        session_set_cookie_params(
-            $this->sessionLifetime,
-            $this->cookiePath,
-            $this->cookieDomain,
-            $this->cookieSecure,
-            $this->cookieHttponly
-        );
     }
     /* }}} */
 
@@ -181,7 +191,9 @@ class HttpCookie extends Auth
 
             $user->onLogin($sid);
 
-            return true;
+            $this->user = $user;
+
+            return $this->user;
         }
 
         return false;
@@ -197,7 +209,7 @@ class HttpCookie extends Auth
 
                 $user = User::loadBySid($this->pdo, $this->getSid());
 
-                if ($user->disabled) {
+                if ($user && $user->disabled) {
                     return false;
                 }
 
@@ -221,25 +233,13 @@ class HttpCookie extends Auth
     protected function startSession() {
         $sid = $this->getSid();
 
-        $sessionName = session_name();
+        if ($this->includeSubdomains) {
+            $this->cookieDomain = "." . $this->cookieDomain;
+        }
 
         if (!is_callable("session_status") || session_status() !== \PHP_SESSION_ACTIVE) {
             session_id($sid);
             session_start();
-        }
-
-        // Override session cookie and extend the expiration time upon page load
-        if (isset($_COOKIE[$sessionName])) {
-            $params = session_get_cookie_params();
-            setcookie(
-                $this->cookieName,
-                $sid,
-                time() + $this->sessionLifetime,
-                $params['path'],
-                $params['domain'],
-                $params['secure'],
-                $params['httponly']
-            );
         }
 
         return $sid;
@@ -260,24 +260,17 @@ class HttpCookie extends Auth
     protected function destroySession() {
         if (!is_callable("session_status") || session_status() == \PHP_SESSION_ACTIVE) {
             // delete cookie
-            $params = session_get_cookie_params();
             setcookie(
                 $this->cookieName,
-                '',
-                time() - 42000,
-                "",
-                $params['domain'],
-                $params['secure'],
-                $params['httponly']
-            );
-            setcookie(
-                $this->cookieName,
-                '',
-                time() - 42000,
-                $params['path'],
-                $params['domain'],
-                $params['secure'],
-                $params['httponly']
+                $this->getSid(),
+                [
+                    'expires' => time() - 42000,
+                    'path' => $this->cookiePath,
+                    'domain' => $this->cookieDomain,
+                    'secure' => $this->cookieSecure,
+                    'httponly' => $this->cookieHttponly,
+                    'samesite' => $this->cookieSameSite,
+                ]
             );
             unset($_COOKIE[$this->cookieName]);
             session_destroy();

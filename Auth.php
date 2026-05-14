@@ -29,9 +29,10 @@ abstract class Auth
     public $digestCompat = false;
     public $sid, $uid;
     public $valid = false;
-    public $sessionLifetime = 172801; // in seconds
+    public $sessionLifetime = 24 * 60 * 60; // 1 day
     public $privateKey = "private Key";
     protected $user = null;
+    protected $pdo = null;
     public $justLoggedOut = false;
 
     public $loginUrl = "login/";
@@ -50,16 +51,16 @@ abstract class Auth
      *
      * @return      void
      */
-    public static function factory($pdo, $realm, $domain, $method, $digestCompat = false) {
+    public static function factory($pdo, $realm, $domain, $method, $digestCompat = false, $includeSubdomains = false) {
         $method = str_replace("_", "-", $method);
 
         // @TODO add https option to enforce https with login attempts
         if ($method == "http-digest" && $digestCompat) {
-            return new Methods\HttpDigest($pdo, $realm, $domain, $digestCompat);
+            return new Methods\HttpDigest($pdo, $realm, $domain, $digestCompat, $includeSubdomains);
         } elseif ($method == "http-basic") {
-            return new Methods\HttpBasic($pdo, $realm, $domain, $digestCompat);
+            return new Methods\HttpBasic($pdo, $realm, $domain, $digestCompat, $includeSubdomains);
         } else {
-            return new Methods\HttpCookie($pdo, $realm, $domain, $digestCompat);
+            return new Methods\HttpCookie($pdo, $realm, $domain, $digestCompat, $includeSubdomains);
         }
     }
     // }}}
@@ -184,7 +185,15 @@ abstract class Auth
     // }}}
     // {{{ getNewSid()
     protected function getNewSid() {
-        session_start();
+        error_log("Getting new session id");
+        session_start([
+            'cookie_lifetime' => $this->sessionLifetime,
+            'cookie_path' => $this->cookiePath,
+            'cookie_secure' => $this->cookieSecure,
+            'cookie_domain' => $this->cookieDomain,
+            'cookie_httponly' => $this->cookieHttponly,
+            'cookie_samesite' => $this->cookieSameSite,
+        ]);
         session_regenerate_id();
 
         $this->sid = session_id();
@@ -331,7 +340,7 @@ abstract class Auth
         $cookiePrefix = preg_replace("/[^-_a-zA-Z0-9]/", "", $cookiePrefix);
         $cookiePrefix = trim($cookiePrefix, "-");
         if (!empty($cookiePrefix)) {
-            $sessionName = "$cookiePrefix-sid";
+            $sessionName = "$cookiePrefix-session";
         }
 
         return $sessionName;
