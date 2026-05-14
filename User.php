@@ -99,7 +99,6 @@ class User extends \Depage\Entity\PdoEntity
         if (!$user) {
             throw new Exceptions\User("user '$username' does not exist.");
         }
-        $user->onLoad();
 
         return $user;
     }
@@ -123,7 +122,6 @@ class User extends \Depage\Entity\PdoEntity
         if (!$user) {
             throw new Exceptions\User("user with email '$email' does not exist.");
         }
-        $user->onLoad();
 
         return $user;
     }
@@ -143,10 +141,6 @@ class User extends \Depage\Entity\PdoEntity
         $user = current(self::loadBy($pdo, [
             'sid' => $sid,
         ]));
-
-        if ($user) {
-            $user->onLoad();
-        }
 
         return $user;
     }
@@ -169,10 +163,6 @@ class User extends \Depage\Entity\PdoEntity
 
         if (!$user) {
             throw new Exceptions\User("user with id '$id' does not exist.");
-        }
-
-        if ($user) {
-            $user->onLoad();
         }
 
         return $user;
@@ -449,6 +439,7 @@ class User extends \Depage\Entity\PdoEntity
     public function jsonSerialize():mixed
     {
         return [
+            'id' => $this->data['id'],
             'name' => $this->data['name'],
             'fullname' => $this->data['fullname'],
             'sortname' => $this->data['sortname'],
